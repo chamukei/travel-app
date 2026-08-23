@@ -1399,6 +1399,312 @@
             );
         }
 
+        function AddBookingModal({ initialData, members = ["我"], onClose, onSubmit }) {
+            const [type, setType] = useState(initialData ? initialData.type : "flight");
+            const [person, setPerson] = useState(initialData ? initialData.person : "全體成員");
+            const [title, setTitle] = useState(initialData ? initialData.title : "");
+            const [bookingRef, setBookingRef] = useState(initialData ? (initialData.bookingRef || "") : "");
+            const [dateTime, setDateTime] = useState(initialData ? (initialData.dateTime || "") : "");
+            const [location, setLocation] = useState(initialData ? (initialData.location || "") : "");
+            const [cost, setCost] = useState(initialData ? (initialData.cost || 0) : 0);
+            const [notes, setNotes] = useState(initialData ? (initialData.notes || "") : "");
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                if (!title.trim()) return;
+                onSubmit({
+                    type,
+                    person,
+                    title: title.trim(),
+                    bookingRef: bookingRef.trim(),
+                    dateTime: dateTime.trim(),
+                    location: location.trim(),
+                    cost: Number(cost) || 0,
+                    notes: notes.trim(),
+                    status: "已確認"
+                });
+            };
+
+            return (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-fade-in">
+                    <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-float border border-slate-100 space-y-4">
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                            <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                                <i data-lucide="bookmark-check" className="w-5 h-5 text-steel-blue"></i>
+                                <span>{initialData ? "編輯預訂與預約紀錄" : "新增預訂與預約紀錄"}</span>
+                            </h3>
+                            <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-600">
+                                <i data-lucide="x" className="w-5 h-5"></i>
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleSubmit} className="space-y-3.5">
+                            <div>
+                                <label className="block text-xs font-semibold text-slate-600 mb-1.5">預訂類型</label>
+                                <div className="grid grid-cols-3 gap-1.5">
+                                    {Object.entries(BOOKING_TYPES).map(([key, info]) => (
+                                        <button
+                                            type="button"
+                                            key={key}
+                                            onClick={() => setType(key)}
+                                            className={`p-2 rounded-xl text-xs font-bold border transition-all ${type === key ? `${info.lightBg} ${info.text} border-current shadow-xs` : 'bg-slate-50 border-slate-100 text-slate-500 hover:bg-slate-100'}`}
+                                        >
+                                            {info.tag}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-600 mb-1">適用成員</label>
+                                    <select 
+                                        value={person} 
+                                        onChange={(e) => setPerson(e.target.value)}
+                                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:border-steel-blue"
+                                    >
+                                        <option value="全體成員">全體成員共享</option>
+                                        {(members || []).map(m => (
+                                            <option key={m} value={m}>{m}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-600 mb-1">費用 (日圓 JPY)</label>
+                                    <input 
+                                        type="number" 
+                                        value={cost} 
+                                        onChange={(e) => setCost(e.target.value)}
+                                        placeholder="0" 
+                                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-steel-blue" 
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-semibold text-slate-600 mb-1">預訂名稱 / 項目標題</label>
+                                <input 
+                                    type="text" 
+                                    value={title} 
+                                    onChange={(e) => setTitle(e.target.value)}
+                                    placeholder="例如：國泰航空 CX504、格拉斯麗新宿酒店..." 
+                                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:border-steel-blue" 
+                                    required 
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-600 mb-1">預訂 / 確認編號 (PNR)</label>
+                                    <input 
+                                        type="text" 
+                                        value={bookingRef} 
+                                        onChange={(e) => setBookingRef(e.target.value)}
+                                        placeholder="例如：CX-889123" 
+                                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-mono font-bold focus:outline-none focus:border-steel-blue" 
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-600 mb-1">預訂日期 / 時間</label>
+                                    <input 
+                                        type="text" 
+                                        value={dateTime} 
+                                        onChange={(e) => setDateTime(e.target.value)}
+                                        placeholder="例如：2026-03-25 15:00" 
+                                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-steel-blue" 
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-semibold text-slate-600 mb-1">地點 / 機場 / 地址</label>
+                                <input 
+                                    type="text" 
+                                    value={location} 
+                                    onChange={(e) => setLocation(e.target.value)}
+                                    placeholder="例如：東京都新宿區歌舞伎町..." 
+                                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-steel-blue" 
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-semibold text-slate-600 mb-1">備註 / 憑證提醒</label>
+                                <textarea 
+                                    value={notes} 
+                                    onChange={(e) => setNotes(e.target.value)}
+                                    placeholder="例如：需憑 QR Code 入場、包含兩客早餐..." 
+                                    rows="2"
+                                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-steel-blue resize-none"
+                                ></textarea>
+                            </div>
+
+                            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                                <button type="button" onClick={onClose} className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 bg-slate-100">取消</button>
+                                <button type="submit" className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-steel-blue hover:bg-steel-blue-dark">儲存紀錄</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            );
+        }
+
+        function CreateTripModal({ onClose, onSubmit }) {
+            const [title, setTitle] = useState("");
+            const [startDate, setStartDate] = useState("2026-03-25");
+            const [endDate, setEndDate] = useState("2026-03-29");
+            const [coverImage, setCoverImage] = useState("https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=1000&q=80");
+            const [totalBudget, setTotalBudget] = useState(200000);
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                if (!title.trim() || !startDate || !endDate) return;
+
+                const start = new Date(startDate);
+                const end = new Date(endDate);
+                const diffDays = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1);
+
+                const dailyItinerary = [];
+                for (let i = 0; i < diffDays; i++) {
+                    const currDate = new Date(start);
+                    currDate.setDate(currDate.getDate() + i);
+                    const dateStr = currDate.toISOString().split('T')[0];
+                    dailyItinerary.push({
+                        day: i + 1,
+                        date: dateStr,
+                        weather: { condition: "Sun", tempMin: 12, tempMax: 20, desc: "晴朗" },
+                        activities: []
+                    });
+                }
+
+                const newTrip = {
+                    id: "trip-" + Date.now(),
+                    title: title.trim(),
+                    startDate,
+                    endDate,
+                    status: "planning",
+                    coverImage: coverImage.trim() || "https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=1000&q=80",
+                    budget: { total: Number(totalBudget) || 200000 },
+                    members: ["我"],
+                    bookings: [],
+                    groupExpenses: [],
+                    toBuyList: [
+                        { id: "tb-1", item: "藥妝/零食伴手禮", completed: false, category: "藥妝", qty: 1, estimatedCost: 5000 }
+                    ],
+                    dailyItinerary
+                };
+
+                onSubmit(newTrip);
+            };
+
+            return (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-fade-in">
+                    <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-float border border-slate-100 space-y-4">
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                            <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                                <i data-lucide="plane-takeoff" className="w-5 h-5 text-steel-blue"></i>
+                                <span>建立全新日本旅程</span>
+                            </h3>
+                            <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-600">
+                                <i data-lucide="x" className="w-5 h-5"></i>
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleSubmit} className="space-y-3.5">
+                            <div>
+                                <label className="block text-xs font-semibold text-slate-600 mb-1">旅程名稱 / 目的地</label>
+                                <input 
+                                    type="text" 
+                                    value={title} 
+                                    onChange={(e) => setTitle(e.target.value)}
+                                    placeholder="例如：2026 東京賞櫻季、關西楓葉之旅..." 
+                                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:border-steel-blue" 
+                                    required 
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-600 mb-1">開始日期</label>
+                                    <input 
+                                        type="date" 
+                                        value={startDate} 
+                                        onChange={(e) => setStartDate(e.target.value)}
+                                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-steel-blue" 
+                                        required 
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-600 mb-1">結束日期</label>
+                                    <input 
+                                        type="date" 
+                                        value={endDate} 
+                                        onChange={(e) => setEndDate(e.target.value)}
+                                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-steel-blue" 
+                                        required 
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-semibold text-slate-600 mb-1">預估總預算 (日圓 JPY)</label>
+                                <input 
+                                    type="number" 
+                                    value={totalBudget} 
+                                    onChange={(e) => setTotalBudget(e.target.value)}
+                                    placeholder="200000" 
+                                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-bold text-steel-blue-dark focus:outline-none focus:border-steel-blue" 
+                                    required 
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-semibold text-slate-600 mb-1">封面圖片網址 (URL)</label>
+                                <input 
+                                    type="url" 
+                                    value={coverImage} 
+                                    onChange={(e) => setCoverImage(e.target.value)}
+                                    placeholder="https://..." 
+                                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-steel-blue" 
+                                />
+                            </div>
+
+                            <div className="space-y-1">
+                                <span className="text-[10px] font-bold text-slate-400 block">推薦預設封面照片：</span>
+                                <div className="grid grid-cols-3 gap-1.5 text-[10px]">
+                                    <button
+                                        type="button"
+                                        onClick={() => setCoverImage("https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=1000&q=80")}
+                                        className="p-1 bg-slate-50 border border-slate-200 rounded-lg text-slate-600 truncate hover:bg-slate-100"
+                                    >
+                                        🌸 東京塔櫻花
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setCoverImage("https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=1000&q=80")}
+                                        className="p-1 bg-slate-50 border border-slate-200 rounded-lg text-slate-600 truncate hover:bg-slate-100"
+                                    >
+                                        ⛩️ 京都鳥居
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setCoverImage("https://images.unsplash.com/photo-1528164344705-475426879e0d?auto=format&fit=crop&w=1000&q=80")}
+                                        className="p-1 bg-slate-50 border border-slate-200 rounded-lg text-slate-600 truncate hover:bg-slate-100"
+                                    >
+                                        🗻 富士山
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                                <button type="button" onClick={onClose} className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 bg-slate-100">取消</button>
+                                <button type="submit" className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-steel-blue hover:bg-steel-blue-dark">建立旅程</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            );
+        }
+
         function DashboardView({ trips = [], onSelectTrip, onCreateTrip, onDeleteTrip }) {
             const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
@@ -1432,8 +1738,8 @@
                             const daysLeft = calculateDaysLeft(trip?.startDate);
                             const itinerary = trip?.dailyItinerary || [];
                             const totalDays = itinerary.length || 1;
-                            const totalActivities = itinerary.reduce((sum, d) => sum + (d?.activities || []).length, 0);
-                            const spent = itinerary.reduce((sum, d) => sum + (d?.activities || []).reduce((s, a) => s + (Number(a?.cost) || 0), 0), 0);
+                            const totalActivities = (itinerary || []).reduce((sum, d) => sum + (d?.activities || []).length, 0);
+                            const spent = (itinerary || []).reduce((sum, d) => sum + (d?.activities || []).reduce((s, a) => s + (Number(a?.cost) || 0), 0), 0);
 
                             let statusBadgeElement;
                             if (daysLeft > 0) {
