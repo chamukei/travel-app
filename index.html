@@ -303,23 +303,43 @@
             "日本環球影城": [34.6654, 135.4323]
         };
 
-        const getGoogleMapsSearchUrl = (locationName) => {
-            return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationName + " 日本")}`;
+        const getGoogleMapsSearchUrl = (actOrLocation) => {
+            if (!actOrLocation) return "#";
+            
+            // If passed a direct string URL or activity object with mapUrl
+            if (typeof actOrLocation === 'object' && actOrLocation.mapUrl && (actOrLocation.mapUrl.startsWith('http://') || actOrLocation.mapUrl.startsWith('https://'))) {
+                return actOrLocation.mapUrl;
+            }
+
+            const queryTerm = typeof actOrLocation === 'string' 
+                ? actOrLocation 
+                : (actOrLocation.address || actOrLocation.location || "");
+
+            if (!queryTerm) return "#";
+            const fullQuery = queryTerm.includes("日本") ? queryTerm : `${queryTerm} 日本`;
+            return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullQuery)}`;
         };
 
         const getGoogleMapsMultiStopRouteUrl = (activities) => {
             if (!activities || activities.length === 0) return "#";
-            const validLocs = activities.map(a => a.location).filter(Boolean);
+            
+            // Collect valid address or location strings in chronological itinerary order
+            const validLocs = activities
+                .map(a => a?.address || a?.location)
+                .filter(Boolean)
+                .map(loc => loc.includes("日本") ? loc : `${loc} 日本`);
+
+            if (validLocs.length === 0) return "#";
             if (validLocs.length === 1) return getGoogleMapsSearchUrl(validLocs[0]);
 
-            const origin = encodeURIComponent(validLocs[0] + " 日本");
-            const destination = encodeURIComponent(validLocs[validLocs.length - 1] + " 日本");
+            const origin = encodeURIComponent(validLocs[0]);
+            const destination = encodeURIComponent(validLocs[validLocs.length - 1]);
             
             if (validLocs.length === 2) {
                 return `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=transit`;
             }
 
-            const waypoints = validLocs.slice(1, -1).map(loc => encodeURIComponent(loc + " 日本")).join('|');
+            const waypoints = validLocs.slice(1, -1).map(loc => encodeURIComponent(loc)).join('|');
             return `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&waypoints=${waypoints}&travelmode=transit`;
         };
 
@@ -571,11 +591,12 @@
                             <div style="font-size: 11px; font-weight: bold; color: ${typeInfo.pinColor}; margin-bottom: 2px;">
                                 ${typeInfo.tag} • ${pt.time}
                             </div>
-                            <div style="font-size: 14px; font-weight: bold; color: #1e293b; margin-bottom: 4px;">
+                            <div style="font-size: 14px; font-weight: bold; color: #1e293b; margin-bottom: 2px;">
                                 ${pt.location}
                             </div>
+                            ${pt.address ? `<div style="font-size: 11px; color: #475569; margin-bottom: 4px;">📍 ${pt.address}</div>` : ''}
                             ${pt.notes ? `<div style="font-size: 11px; color: #64748b; margin-bottom: 6px;">💡 ${pt.notes}</div>` : ''}
-                            <a href="${getGoogleMapsSearchUrl(pt.location)}" target="_blank" rel="noopener noreferrer" style="
+                            <a href="${getGoogleMapsSearchUrl(pt)}" target="_blank" rel="noopener noreferrer" style="
                                 display: inline-flex;
                                 items-center;
                                 gap: 4px;
@@ -652,6 +673,8 @@
             const [time, setTime] = useState(initialData ? initialData.time : "10:00");
             const [type, setType] = useState(initialData ? initialData.type : "Sightseeing");
             const [location, setLocation] = useState(initialData ? initialData.location : "");
+            const [address, setAddress] = useState(initialData ? (initialData.address || "") : "");
+            const [mapUrl, setMapUrl] = useState(initialData ? (initialData.mapUrl || "") : "");
             const [notes, setNotes] = useState(initialData ? initialData.notes : "");
             const [cost, setCost] = useState(initialData ? initialData.cost : 0);
             const [travelTime, setTravelTime] = useState(initialData ? (initialData.travelTime || "") : "");
@@ -662,16 +685,18 @@
                 onSubmit({
                     time,
                     type,
-                    location,
-                    notes,
+                    location: location.trim(),
+                    address: address.trim(),
+                    mapUrl: mapUrl.trim(),
+                    notes: notes.trim(),
                     cost: Number(cost) || 0,
-                    travelTime
+                    travelTime: travelTime.trim()
                 });
             };
 
             return (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-fade-in">
-                    <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-float border border-slate-100">
+                    <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-float border border-slate-100 max-h-[90vh] overflow-y-auto">
                         <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
                             <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
                                 <span className="w-2 h-5 bg-steel-blue rounded-full"></span>
@@ -724,7 +749,7 @@
                             </div>
 
                             <div>
-                                <label className="block text-xs font-semibold text-slate-600 mb-1">景點 / 餐廳地點名稱</label>
+                                <label className="block text-xs font-semibold text-slate-600 mb-1">景點 / 餐廳名稱</label>
                                 <input 
                                     type="text" 
                                     value={location} 
@@ -732,6 +757,28 @@
                                     placeholder="例如：淺草寺、一蘭拉麵..." 
                                     className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-steel-blue" 
                                     required 
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-semibold text-slate-600 mb-1">Google Maps 手動精確地址 / 地標全名</label>
+                                <input 
+                                    type="text" 
+                                    value={address} 
+                                    onChange={(e) => setAddress(e.target.value)} 
+                                    placeholder="例如：東京都台東區淺草2-3-1 (可增強導航精準度)" 
+                                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-steel-blue" 
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-semibold text-slate-600 mb-1">Google Maps 網址 / 連結 (選填)</label>
+                                <input 
+                                    type="url" 
+                                    value={mapUrl} 
+                                    onChange={(e) => setMapUrl(e.target.value)} 
+                                    placeholder="https://maps.app.goo.gl/... (如有可直接黏貼)" 
+                                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-steel-blue" 
                                 />
                             </div>
 
@@ -1037,7 +1084,7 @@
                                                                     )}
 
                                                                     <a 
-                                                                        href={getGoogleMapsSearchUrl(act?.location || "")}
+                                                                        href={getGoogleMapsSearchUrl(act)}
                                                                         target="_blank"
                                                                         rel="noopener noreferrer"
                                                                         className="text-xs font-medium text-steel-blue bg-steel-blue-light hover:bg-steel-blue hover:text-white border border-teal-200 px-2 py-0.5 rounded-md transition-colors flex items-center gap-1"
@@ -1049,6 +1096,11 @@
                                                                 </div>
 
                                                                 <h4 className="text-base font-bold text-slate-800 tracking-tight">{act?.location}</h4>
+                                                                {act?.address && (
+                                                                    <p className="text-xs text-slate-500 font-medium mt-0.5">
+                                                                        📍 {act.address}
+                                                                    </p>
+                                                                )}
                                                                 {act?.notes && (
                                                                     <p className="text-xs text-slate-500 mt-1 leading-relaxed">
                                                                         💡 {act.notes}
